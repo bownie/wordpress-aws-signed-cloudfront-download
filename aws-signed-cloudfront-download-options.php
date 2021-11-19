@@ -1,9 +1,9 @@
 <?php
 defined( 'ABSPATH' ) OR exit;
 /*
-Plugin Name: AWS Signed PDF Download
-Description: Generates signed urls for downloading a PDF from Cloudfront
-Version: 1.0.0
+Plugin Name: AWS Signed Cloudfront Download
+Description: Generates signed urls for downloading content from Cloudfront
+Version: 1.1.0
 Author: Richard Bown
 
 Copyright 2021 Tulipesque 
@@ -21,15 +21,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-register_activation_hook(   __FILE__, array( 'AWSSignedPDFDownload', 'aws_signed_pdf_download_activation' ) );
-register_deactivation_hook(   __FILE__, array( 'AWSSignedPDFDownload', 'aws_signed_pdf_download_deactivation' ) );
-register_uninstall_hook(    __FILE__, array( 'AWSSignedPDFDownload', 'aws_signed_pdf_download_uninstall' ) );
+register_activation_hook(   __FILE__, array( 'AWSSignedCloudfrontDownload', 'aws_signed_cloudfront_download_activation' ) );
+register_deactivation_hook(   __FILE__, array( 'AWSSignedCloudfrontDownload', 'aws_signed_cloudfront_download_deactivation' ) );
+register_uninstall_hook(    __FILE__, array( 'AWSSignedCloudfrontDownload', 'aws_signed_cloudfront_download_uninstall' ) );
 
-add_action( 'plugins_loaded', array( 'AWSSignedPDFDownload', 'init' ) );
+add_action( 'plugins_loaded', array( 'AWSSignedCloudfrontDownload', 'init' ) );
 
-add_shortcode('wp-pdf-sign', array ('AWSSignedPDFDownload', 'get_signed_PDF_from_shortcode' ) );
+add_shortcode('wp-cloudfront-sign', array ('AWSSignedCloudfrontDownload', 'get_signed_cloudfront_from_shortcode' ) );
 
-class AWSSignedPDFDownload
+class AWSSignedCloudfrontDownload
 {
 
   protected static $instance;
@@ -42,13 +42,13 @@ class AWSSignedPDFDownload
 
   public function __construct()
   {
-    require_once(plugin_dir_path(__FILE__) . '/aws-signed-pdf-download-options.php');
-    new AWSSignedPDFDownload_Options();
+    require_once(plugin_dir_path(__FILE__) . '/aws-signed-cloudfront-download-options.php');
+    new AWSSignedCloudfrontDownload_Options();
 
-    add_filter('wp_get_attachment_url', array($this,'get_signed_PDF_Download', "Empty Label", "file.txt"),100);
+    add_filter('wp_get_attachment_url', array($this,'get_signed_Cloudfront_Download', "Empty Label", "file.txt"),100);
   }
 
-  function get_signed_PDF_from_shortcode($atts = array(), $content = null) 
+  function get_signed_cloudfront_from_shortcode($atts = array(), $content = null) 
   {
     $label = "Download Link";
     $downloadFile = "download.txt";
@@ -61,20 +61,20 @@ class AWSSignedPDFDownload
       $downloadFile = $atts['filename'];
     }
 
-    return self::get_signed_PDF_Download($content, $label, $downloadFile);
+    return self::get_signed_Cloudfront_Download($content, $label, $downloadFile);
   }
 
-  // Create a Signed PDF_Download label for media assets stored on S3 and served up via CloudFront
+  // Create a Signed Cloudfront_Download label for media assets stored on S3 and served up via CloudFront
   //
-  function get_signed_PDF_Download($resource, $label, $downloadFile)
+  function get_signed_Cloudfront_Download($resource, $label, $downloadFile)
   {
-    $options = get_option('aws_signed_pdf_download_settings');
+    $options = get_option('aws_signed_cloudfront_download_settings');
 
-    $expires = time() + $options['aws_signed_pdf_download_lifetime'] * 60; // Convert timeout to seconds
+    $expires = time() + $options['aws_signed_cloudfront_download_lifetime'] * 60; // Convert timeout to seconds
     $json = '{"Statement":[{"Resource":"'.$resource.'","Condition":{"DateLessThan":{"AWS:EpochTime":'.$expires.'}}}]}';
 
     // Read the private key
-    $key = openssl_get_privatekey($options['aws_signed_pdf_download_pem']);
+    $key = openssl_get_privatekey($options['aws_signed_cloudfront_download_pem']);
     if(!$key)
     {
       error_log( 'Failed to read private key: '.openssl_error_string() );
@@ -94,41 +94,17 @@ class AWSSignedPDFDownload
     $signature = str_replace(array('+','=','/'), array('-','_','~'), $base64_signed_policy);
 
     // Construct the return
-    // 
     //
-    //header("Content-type:application/pdf");
-
-    $url = $resource.'?Expires='.$expires.'&Signature='.$signature.'&Key-Pair-Id='.$options['aws_signed_pdf_download_key_pair_id'];
-
-    //header("Location: " + url);
-    // Use basename() function to return the base name of file
-    //$file_name = basename($url);
-    
-    // Use file_get_contents() function to get the file
-    // from url and use file_put_contents() function to
-    // save the file by using base name
-    //if(file_put_contents( $file_name,file_get_contents($url))) {
-        //echo "File downloaded successfully";
-    //}
-    //else {
-        //echo "File downloading failed.";
-    //}
-    //
-    //$pluginDir = plugin_dir_path(__FILE__) . '/'; //'./'; //dirname(__FILE__);
-
-    if ($label === "") {
-      $label = "Download Button";
-    }
+    $url = $resource.'?Expires='.$expires.'&Signature='.$signature.'&Key-Pair-Id='.$options['aws_signed_cloudfront_download_key_pair_id'];
 
     $encodeUrl = urlencode($url);
-    $pluginDir = '/wp-content/plugins/wordpress-aws-signed-pdf-download';
-    //$button_string = "<p><a href='{$pluginDir}/download.php?file={$url}' target='_blank'>Download PDF</a></p>";
+    $pluginDir = '/wp-content/plugins/wordpress-aws-signed-cloudfront-download';
     $button_string = "<p><a href='{$pluginDir}/download.php?filename={$downloadFile}&downloadUrl={$encodeUrl}'>{$label}</a></p>";
 
     return $button_string;
   }
 
-  public static function aws_signed_pdf_download_activation() 
+  public static function aws_signed_cloudfront_download_activation() 
   {
     if ( ! current_user_can( 'activate_plugins' ) )
         return;
@@ -139,7 +115,7 @@ class AWSSignedPDFDownload
     // exit( var_dump( $_GET ) );
   }
 
-  public static function aws_signed_pdf_download_deactivation() {
+  public static function aws_signed_cloudfront_download_deactivation() {
     if ( ! current_user_can( 'activate_plugins' ) )
         return;
     $plugin = isset( $_REQUEST['plugin'] ) ? $_REQUEST['plugin'] : '';
@@ -149,7 +125,7 @@ class AWSSignedPDFDownload
     // exit( var_dump( $_GET ) );
   }
 
-  public static function aws_signed_pdf_download_uninstall() {
+  public static function aws_signed_cloudfront_download_uninstall() {
     if ( ! current_user_can( 'activate_plugins' ) )
         return;
     check_admin_referer( 'bulk-plugins' );
