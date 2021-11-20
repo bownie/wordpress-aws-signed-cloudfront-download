@@ -7,6 +7,9 @@ Create a key pair and configure the CloudFront distribution appropriately
 as well as in this plugin and then you can wrap the base URL with tags 
 [wp-cloudfront-sign]my-url[/wp-cloudfront-sign].
 
+The download functionality will only work for configured domains - a list of
+which (comma separated) can be included in the options.
+
 Full details of the generation of the keypair and configuration of AWS can 
 be found in the 
 [AWS documentation](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PrivateContent.html)
