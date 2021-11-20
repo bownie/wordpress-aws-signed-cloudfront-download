@@ -44,11 +44,9 @@ class AWSSignedCloudfrontDownload
   {
     require_once(plugin_dir_path(__FILE__) . '/aws-signed-cloudfront-download-options.php');
     new AWSSignedCloudfrontDownload_Options();
-
-    add_filter( 'wp_get_attachment_url', array( $this,'get_signed_Cloudfront_Download', "Empty Label", "file.txt" ),100);
   }
 
-  function get_signed_cloudfront_from_shortcode($atts = array(), $content = null) 
+  static function get_signed_cloudfront_from_shortcode($atts = array(), $content = null) 
   {
     $label = "Download Link";
     $downloadFile = "download.txt";
